@@ -272,24 +272,34 @@ function handleAudioStream(response, onComplete) {
             console.log("STREAM DONE");
 
             // Tell MediaSource no more data is coming so the <audio>
-            // element can reliably reach readyState 'ended'.
-            try {
-                if (mediaSource.readyState === "open" && !sourceBuffer?.updating) {
-                    mediaSource.endOfStream();
-                } else if (mediaSource.readyState === "open") {
-                    sourceBuffer.addEventListener("updateend", () => {
-                        if (mediaSource.readyState === "open") {
-                            try { mediaSource.endOfStream(); } catch (e) { console.error(e); }
-                        }
-                    }, { once: true });
+            // element can reliably reach readyState 'ended'. We must wait
+            // until the queue is empty AND the SourceBuffer is not mid-update,
+            // otherwise endOfStream() throws InvalidStateError.
+            function trySignalEndOfStream(attemptsLeft) {
+                if (mediaSource.readyState !== "open") return;
+
+                if (queue.length === 0 && sourceBuffer && !sourceBuffer.updating) {
+                    try {
+                        mediaSource.endOfStream();
+                    } catch (e) {
+                        console.error("endOfStream error:", e);
+                    }
+                    return;
                 }
-            } catch (e) {
-                console.error("endOfStream error:", e);
+
+                if (attemptsLeft <= 0) {
+                    console.warn("Giving up on endOfStream after waiting; relying on failsafe timer.");
+                    return;
+                }
+
+                setTimeout(() => trySignalEndOfStream(attemptsLeft - 1), 100);
             }
+
+            trySignalEndOfStream(30); // up to ~3s of polling
 
             // Safety net: if 'ended' still doesn't fire for any reason,
             // force recording back on after a short grace period.
-            setTimeout(finishSpeaking, 1500);
+            setTimeout(finishSpeaking, 4000);
 
             return;
         }
