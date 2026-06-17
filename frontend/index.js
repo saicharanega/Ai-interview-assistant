@@ -246,8 +246,16 @@ function handleAudioStream(response, onComplete) {
             if (mediaSource.readyState === "open") {
                 try {
                     mediaSource.endOfStream();
-                } catch (e) { }
+                } catch (e) {}
             }
+
+            setTimeout(() => {
+                isSpeaking = false;
+                speakingBubble.classList.add("hidden");
+                enableRecording();
+                console.log("Recording enabled");
+            }, 1000);
+
             if (onComplete) onComplete();
             return;
         }
@@ -276,6 +284,7 @@ function handleAudioStream(response, onComplete) {
     reader.read().then(processChunk);
 
     currentAudio.onended = () => {
+        console.log("AUDIO ENDED");
         isSpeaking = false;
         speakingBubble.classList.add("hidden");
         enableRecording();
