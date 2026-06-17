@@ -1,0 +1,9 @@
+flask
+flask-cors
+python-dotenv
+langchain
+langgraph
+langchain-groq
+assemblyai
+requests
+gunicorn
