@@ -1,5 +1,3 @@
-
-
 // Global State
 let mediaRecorder = null;
 let recordingChunks = [];
