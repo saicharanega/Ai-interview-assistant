@@ -51,19 +51,19 @@ const iconMap = {
 
 function showInterviewPanel(subject) {
     currentSubject = subject;
-    
+
     subjectBtns.forEach((btn) => {
         btn.classList.toggle("active", btn.dataset.subject === subject);
     });
-    
+
     welcomeState.classList.add("hidden");
     interviewState.classList.remove("hidden");
     feedbackSection.classList.add("hidden");
-    
+
     subjectBadge.textContent = subject;
     subjectIcon.className = iconMap[subject] + " text-2xl";
     questionNum.textContent = "1";
-    
+
     speakingBubble.classList.add("hidden");
     startInterviewBtn.classList.remove("hidden");
     recordBtn.classList.add("hidden");
@@ -110,13 +110,13 @@ function showFeedbackSection() {
 function displayFeedback(data) {
     feedbackSubject.textContent = data.subject || currentSubject;
     scoreValue.textContent = data.candidate_score || 0;
-    
+
     const offset = 301.6 - ((data.candidate_score || 0) / 5) * 301.6;
     scoreCircle.style.strokeDashoffset = offset;
-    
+
     feedbackText.textContent = data.feedback || "No feedback available";
     improvementText.textContent = data.areas_of_improvement || "No suggestions available";
-    
+
     getFeedbackArea.classList.add("hidden");
     feedbackContent.classList.remove("hidden");
 }
@@ -127,37 +127,37 @@ function resetToWelcome() {
     mediaRecorder = null;
     recordingChunks = [];
     recordedBlob = null;
-    
+
     if (currentAudio) {
         currentAudio.pause();
         currentAudio = null;
     }
-    
+
     stopSessionTimer();
     document.getElementById("sessionTimer").textContent = "00:00";
-    
+
     const questionDisplayCard = document.getElementById("questionDisplayCard");
     const questionTextDisplay = document.getElementById("questionTextDisplay");
     if (questionDisplayCard && questionTextDisplay) {
         questionDisplayCard.classList.add("hidden");
         questionTextDisplay.textContent = "";
     }
-    
+
     subjectBtns.forEach((btn) => {
         btn.classList.remove("active");
     });
-    
+
     welcomeState.classList.remove("hidden");
     interviewState.classList.add("hidden");
-    
+
     recordBtn.classList.remove("bg-red-500", "text-white", "recording-active");
     recordBtn.classList.add("bg-zinc-800/80", "text-gray-400");
     micIcon.classList.remove("hidden");
     stopIcon.classList.add("hidden");
     submitBtn.classList.add("hidden");
-    
+
     speakingBubble.classList.add("hidden");
-    
+
     scoreCircle.style.strokeDashoffset = 301.6;
     getFeedbackBtn.textContent = "Get Feedback";
     getFeedbackBtn.disabled = false;
@@ -225,7 +225,7 @@ function handleAudioStream(response, onComplete) {
         currentAudio = null;
     }
     currentAudio = new Audio(audioUrl);
-    currentAudio.play().catch(() => {});
+    currentAudio.play().catch(() => { });
 
     mediaSource.addEventListener("sourceopen", () => {
         sourceBuffer = mediaSource.addSourceBuffer("audio/mpeg");
@@ -246,7 +246,7 @@ function handleAudioStream(response, onComplete) {
             if (mediaSource.readyState === "open") {
                 try {
                     mediaSource.endOfStream();
-                } catch (e) {}
+                } catch (e) { }
             }
             if (onComplete) onComplete();
             return;
@@ -296,11 +296,11 @@ function handleAudioStream(response, onComplete) {
 function startRecording() {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         const options = { mimeType: "audio/webm;codecs=opus" };
-        
+
         if (!MediaRecorder.isTypeSupported(options.mimeType)) {
             options.mimeType = "audio/webm";
         }
-        
+
         mediaRecorder = new MediaRecorder(stream, options);
         recordingChunks = [];
 
@@ -309,14 +309,14 @@ function startRecording() {
                 recordingChunks.push(e.data);
             }
         };
-        
+
         mediaRecorder.onstop = () => {
             recordedBlob = new Blob(recordingChunks, { type: "audio/webm" });
             stream.getTracks().forEach((track) => track.stop());
         };
 
         mediaRecorder.start();
-        
+
         recordBtn.classList.remove("bg-zinc-800/80", "text-gray-400");
         recordBtn.classList.add("bg-red-500", "text-white", "recording-active");
         micIcon.classList.add("hidden");
@@ -330,7 +330,7 @@ function startRecording() {
 function stopRecording() {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
         mediaRecorder.stop();
-        
+
         recordBtn.classList.remove("bg-red-500", "text-white", "recording-active");
         recordBtn.classList.add("bg-zinc-800/80", "text-gray-400");
         micIcon.classList.remove("hidden");
@@ -344,28 +344,28 @@ function stopRecording() {
 
 // ========== API FUNCTIONS ==========
 
-const startInterviewApiUrl = "http://127.0.0.1:5000/start-interview";
+const startInterviewApiUrl = "https://ai-interview-assistant-f54y.onrender.com/start-interview";
 
 
 async function startInterview() {
     startInterviewBtn.classList.add("hidden");
     recordBtn.classList.remove("hidden");
     recordingStatus.textContent = "Connecting...";
-    
+
     try {
         const response = await fetch(startInterviewApiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ subject: currentSubject })
         });
-        
+
         if (response.ok) {
             startSessionTimer();
             displayQuestionText(response);
         }
-        
+
         const contentType = response.headers.get("content-type");
-        
+
         if (contentType && contentType.includes("text/plain")) {
             handleAudioStream(response, () => {
                 endInterviewBtn.disabled = false;
@@ -384,7 +384,8 @@ async function startInterview() {
     }
 }
 
-const submitAnswerApiUrl = "http://127.0.0.1:5000/submit-answer";
+const submitAnswerApiUrl = "https://ai-interview-assistant-f54y.onrender.com/submit-answer";
+
 
 
 async function submitAnswer() {
@@ -401,28 +402,28 @@ async function submitAnswer() {
             method: "POST",
             body: formData
         });
-        
+
         if (response.ok) {
             displayQuestionText(response);
         }
-        
+
         const contentType = response.headers.get("content-type");
         const isComplete = response.headers.get('X-Interview-Complete') === 'true';
         const questionNumber = response.headers.get('X-Question-Number');
-        
+
         if (questionNumber) {
             updateQuestionNumber(questionNumber);
         }
-        
+
         if (isComplete) {
             stopSessionTimer();
         }
-        
+
         if (contentType && contentType.includes("text/plain")) {
             handleAudioStream(response, () => {
                 recordedBlob = null;
                 recordingChunks = [];
-                
+
                 if (isComplete) {
                     currentAudio.onended = () => {
                         isSpeaking = false;
@@ -438,7 +439,7 @@ async function submitAnswer() {
             console.log("Response:", data);
             recordedBlob = null;
             recordingChunks = [];
-            
+
             if (isComplete) {
                 showFeedbackSection();
             } else {
@@ -462,11 +463,13 @@ async function endInterview() {
     disableRecording();
     endInterviewBtn.disabled = true;
     recordingStatus.textContent = "Ending interview...";
-    
+
     await getFeedback();
 }
 
-const getFeedbackApiUrl = "http://127.0.0.1:5000/get-feedback";
+
+
+const getFeedbackApiUrl = "https://ai-interview-assistant-f54y.onrender.com/get-feedback";
 
 async function getFeedback() {
     showFeedbackSection();
@@ -479,9 +482,9 @@ async function getFeedback() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({})
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             displayFeedback(data.feedback);
         }
@@ -506,7 +509,7 @@ startInterviewBtn.addEventListener("click", startInterview);
 
 recordBtn.addEventListener("click", () => {
     if (isSpeaking || recordBtn.disabled) return;
-    
+
     if (!mediaRecorder || mediaRecorder.state === "inactive") {
         startRecording();
     } else {
