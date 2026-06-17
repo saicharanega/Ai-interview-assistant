@@ -249,17 +249,12 @@ function handleAudioStream(response, onComplete) {
                 } catch (e) {}
             }
 
-            setTimeout(() => {
-                isSpeaking = false;
-                speakingBubble.classList.add("hidden");
-                enableRecording();
-                console.log("Recording enabled");
-            }, 1000);
+            console.log("Stream finished");
 
             if (onComplete) onComplete();
             return;
         }
-        const textChunk = decoder.decode(value, { stream: true });
+                const textChunk = decoder.decode(value, { stream: true });
         textChunk.split("\n").forEach((line) => {
             if (line.trim()) {
                 try {
