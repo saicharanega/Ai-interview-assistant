@@ -125,7 +125,11 @@ def start_interview():
     }, config=config)
     question = response["messages"][-1].content
     print(f"\n[Question {question_count}] {question}")
-    return stream_audio(question), {"Content-Type": "text/plain"}
+    return Response(
+        stream_audio(question),
+        mimetype='text/plain',
+        headers={'X-Question-Number': str(question_count)}
+    )
 
 def speech_to_text(audio_path):
   """Convert audio file to text using AssemblyAI"""

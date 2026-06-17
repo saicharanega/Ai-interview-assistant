@@ -251,30 +251,45 @@ function handleAudioStream(response, onComplete) {
 
     });
 
+    let hardFailsafeTimer;
+
+    function finishSpeaking() {
+        if (!isSpeaking) return;
+        console.log("FORCED ENABLE");
+        clearTimeout(hardFailsafeTimer);
+        isSpeaking = false;
+        speakingBubble.classList.add("hidden");
+        enableRecording();
+        if (onComplete) {
+            onComplete();
+        }
+    }
+
     function processChunk({ done, value }) {
 
         if (done) {
 
             console.log("STREAM DONE");
 
-            setTimeout(() => {
-
-                if (isSpeaking) {
-
-                    console.log("FORCED ENABLE");
-
-                    isSpeaking = false;
-
-                    speakingBubble.classList.add("hidden");
-
-                    enableRecording();
-
-                    if (onComplete) {
-                        onComplete();
-                    }
+            // Tell MediaSource no more data is coming so the <audio>
+            // element can reliably reach readyState 'ended'.
+            try {
+                if (mediaSource.readyState === "open" && !sourceBuffer?.updating) {
+                    mediaSource.endOfStream();
+                } else if (mediaSource.readyState === "open") {
+                    sourceBuffer.addEventListener("updateend", () => {
+                        if (mediaSource.readyState === "open") {
+                            try { mediaSource.endOfStream(); } catch (e) { console.error(e); }
+                        }
+                    }, { once: true });
                 }
+            } catch (e) {
+                console.error("endOfStream error:", e);
+            }
 
-            }, 3000);
+            // Safety net: if 'ended' still doesn't fire for any reason,
+            // force recording back on after a short grace period.
+            setTimeout(finishSpeaking, 1500);
 
             return;
         }
@@ -325,38 +340,27 @@ function handleAudioStream(response, onComplete) {
     reader.read().then(processChunk);
 
     currentAudio.onended = () => {
-
         console.log("AUDIO ENDED");
-
-        isSpeaking = false;
-
-        speakingBubble.classList.add("hidden");
-
-        enableRecording();
-
-        if (onComplete) {
-            onComplete();
-        }
-
+        clearTimeout(hardFailsafeTimer);
+        finishSpeaking();
         URL.revokeObjectURL(audioUrl);
     };
 
     currentAudio.onerror = () => {
-
         console.log("AUDIO ERROR");
-
-        isSpeaking = false;
-
-        speakingBubble.classList.add("hidden");
-
-        enableRecording();
-
-        if (onComplete) {
-            onComplete();
-        }
-
+        clearTimeout(hardFailsafeTimer);
+        finishSpeaking();
         URL.revokeObjectURL(audioUrl);
     };
+
+    // Absolute last-resort failsafe: even if the fetch stream never
+    // resolves 'done' (e.g. proxy/host buffering swallows EOF) and the
+    // audio element never reaches 'ended', force the mic back on after
+    // a generous timeout so the user is never permanently stuck.
+    hardFailsafeTimer = setTimeout(() => {
+        console.log("HARD FAILSAFE TRIGGERED");
+        finishSpeaking();
+    }, 20000);
 }
 
 
