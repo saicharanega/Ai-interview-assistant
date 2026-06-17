@@ -340,20 +340,41 @@ mediaSource.addEventListener("sourceopen", () => {
 
 function processChunk({ done, value }) {
 
-    if (done) {
-        console.log("STREAM DONE");
+if (done) {
+    console.log("STREAM DONE");
 
-        if (mediaSource.readyState === "open") {
-            try {
+    const finishStream = () => {
+        try {
+            if (mediaSource.readyState === "open") {
                 mediaSource.endOfStream();
-            } catch (e) {
-                console.error(e);
             }
+        } catch (e) {
+            console.error(e);
         }
 
-        if (onComplete) onComplete();
-        return;
+        setTimeout(() => {
+            if (isSpeaking) {
+                console.log("FORCED ENABLE");
+                isSpeaking = false;
+                speakingBubble.classList.add("hidden");
+                enableRecording();
+            }
+        }, 2000);
+    };
+
+    if (sourceBuffer && sourceBuffer.updating) {
+        sourceBuffer.addEventListener(
+            "updateend",
+            finishStream,
+            { once: true }
+        );
+    } else {
+        finishStream();
     }
+
+    if (onComplete) onComplete();
+    return;
+}
 
     const textChunk = decoder.decode(value, { stream: true });
 
