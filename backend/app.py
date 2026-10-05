@@ -34,8 +34,12 @@ agent = create_agent(
 
 checkpointer = ""
 
+# model = ChatGroq(
+#     model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+#     api_key=GROQ_API_KEY
+# )
 model = ChatGroq(
-    model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+    model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
     api_key=GROQ_API_KEY
 )
 
